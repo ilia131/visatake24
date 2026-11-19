@@ -119,7 +119,7 @@ def test_consultant_reject_and_slot_release(scenario):
 
 
 def test_full_workflow_and_private_download(scenario, approved, settings, django_capture_on_commit_callbacks):
-    owner, stranger, consultant, _, admin, slot = scenario
+    owner, stranger, consultant, other_consultant, admin, slot = scenario
     client = client_for(owner)
     reviewer = client_for(admin)
     assert client.get(path(approved)).data["status"] == "awaiting_payment"
@@ -159,6 +159,18 @@ def test_full_workflow_and_private_download(scenario, approved, settings, django
     assert response.data["payment_reviewed_by"] == admin.pk
     assert reviewer.post(approve_url).status_code == 400
     assert reviewer.get(ROOT + "admin/payments/").data["count"] == 0
+    owner_dashboard = "/api/v1/dashboard/appointments/"
+    assert [(row["id"], row["status"]) for row in client.get(owner_dashboard).data] == [
+        (approved, "confirmed"),
+    ]
+    assert client_for(stranger).get(owner_dashboard).data == []
+    consultant_dashboard = ROOT + "consultant/"
+    consultant_rows = client_for(consultant).get(consultant_dashboard).data["results"]
+    assert [(row["id"], row["status"]) for row in consultant_rows] == [
+        (approved, "confirmed"),
+    ]
+    assert client_for(other_consultant).get(consultant_dashboard).data["count"] == 0
+    assert client.get(consultant_dashboard).status_code == 403
     assert book(stranger, slot).status_code == 400
     complete_url = path(approved, "complete/", "consultant/")
     assert client_for(consultant).post(complete_url).status_code == 400
@@ -284,3 +296,13 @@ def test_failed_receipt_history_rolls_back_file_and_status(scenario, approved, s
     assert appointment.status == Appointment.Status.AWAITING_PAYMENT
     assert not appointment.payment_receipt
     assert not list(settings.APPOINTMENT_RECEIPT_ROOT.iterdir())
+
+
+def test_django_admin_requires_staff_session(scenario):
+    owner, _, _, _, admin, _ = scenario
+    client = APIClient()
+    client.force_login(owner)
+    assert client.get("/admin/").status_code == 302
+
+    client.force_login(admin)
+    assert client.get("/admin/").status_code == 200
