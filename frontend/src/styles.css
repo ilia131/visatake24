@@ -1345,3 +1345,57 @@ dialog::backdrop {
     transition-duration: 0.01ms !important;
   }
 }
+
+.phone-field {
+  display: grid;
+  gap: .65rem;
+}
+.phone-country {
+  position: relative;
+}
+.phone-country-button,
+.phone-country-options button {
+  width: 100%;
+  padding: .55rem .75rem;
+  text-align: start;
+}
+.phone-country-button {
+  border: 1px solid currentColor;
+  border-radius: .65rem;
+}
+.phone-country-options {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + .25rem);
+  padding: .65rem;
+  z-index: 2;
+  background: Canvas;
+  color: CanvasText;
+  border: 1px solid currentColor;
+  border-radius: .65rem;
+  box-shadow: 0 10px 25px #0002;
+}
+.phone-country-options ul {
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: .25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.phone-country-options button:hover,
+.phone-country-options button:focus-visible,
+.phone-country-options button[aria-pressed="true"] {
+  background: #5b7c9d1f;
+}
+.phone-number {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+.phone-number input {
+  min-width: 0;
+  flex: 1;
+}
+.password-toggle {
+  justify-self: start;
+}

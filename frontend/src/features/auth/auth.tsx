@@ -1,48 +1,14 @@
-import { useEffect, useState } from "react";
-import {
-  Link,
-  Navigate,
-  Outlet,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState, type FormEvent } from "react";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
-import { code, paths, post, queryClient, resetCsrf } from "../../lib/api";
+import type { CountryCode } from "libphonenumber-js";
+import { code, message, paths, post, queryClient, resetCsrf } from "../../lib/api";
 import { useAction, useApiQuery } from "../../lib/query";
-import { latinDigits } from "../../lib/format";
 import type { User } from "../../lib/types";
-import {
-  Button,
-  ErrorState,
-  Input,
-  LoadingSkeleton,
-} from "../../components/ui";
+import { Button, ErrorState, Input, LoadingSkeleton } from "../../components/ui";
+import { PhoneField, validPhone } from "./phone-field";
 
-const phoneSchema = z.object({
-  phone: z
-    .string()
-    .trim()
-    .transform(latinDigits)
-    .transform((s) => s.replace(/[ ()-]/g, "").replace(/^09/, "+989"))
-    .pipe(
-      z
-        .string()
-        .regex(
-          /^\+[1-9]\d{7,14}$/,
-          "شماره را به شکل ۰۹… یا با پیش‌شماره بین‌المللی وارد کنید.",
-        ),
-    ),
-});
-const verifySchema = z.object({
-  otp: z
-    .string()
-    .trim()
-    .transform(latinDigits)
-    .pipe(z.string().regex(/^\d{6}$/, "کد باید ۶ رقم باشد.")),
-});
 const userKey = ["private", "user"];
 export const useUser = () =>
   useApiQuery<{ user: User } | null>(userKey, paths.auth + "me/");
@@ -84,136 +50,89 @@ function redirect(from: unknown) {
     : "/dashboard";
 }
 
-export function Login() {
+function CredentialsForm({ register }: { register: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const request = useAction((phone: string) =>
-    post(paths.auth + "otp/request/", { phone_number: phone }),
-  );
-  const form = useForm({
-    resolver: zodResolver(phoneSchema),
-    defaultValues: { phone: "" },
+  const [country, setCountry] = useState<CountryCode>("IR");
+  const [number, setNumber] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const action = useMutation({
+    gcTime: 0,
+    mutationFn: (payload: Record<string, string>) =>
+      post<{ user: User }>(paths.auth + (register ? "register/" : "login/"), payload),
+    onSuccess: async (result) => {
+      resetCsrf();
+      await queryClient.cancelQueries({ queryKey: ["private"] });
+      queryClient.removeQueries({
+        predicate: ({ queryKey }) => queryKey[0] === "private" && queryKey[1] !== "user",
+      });
+      queryClient.setQueryData(userKey, result);
+      navigate(redirect(location.state?.from), { replace: true });
+    },
+    onError: (failure) => setError(
+      code(failure) === 401 ? "شماره تلفن یا رمز عبور نادرست است." : message(failure),
+    ),
   });
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validPhone(number, country)) {
+      setError("شماره تلفن برای کشور انتخاب‌شده معتبر نیست.");
+      return;
+    }
+    const fields = Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>;
+    if (!fields.password || (register && (!fields.first_name.trim() || !fields.last_name.trim()))) {
+      setError("فیلدهای ضروری را تکمیل کنید.");
+      return;
+    }
+    if (register && fields.password !== fields.password_confirmation) {
+      setError("رمز عبور و تکرار آن یکسان نیستند.");
+      return;
+    }
+    setError("");
+    action.mutate({ ...fields, country_code: country, phone_number: number });
+  }
+
   return (
     <div className="auth-shell">
       <section className="panel auth-card">
         <ShieldCheck size={34} />
-        <h1>ورود یا ثبت‌نام</h1>
-        <p>برای دریافت کد تأیید، شماره موبایل خود را وارد کنید.</p>
-        <form
-          onSubmit={form.handleSubmit(({ phone }) =>
-            request.mutate(phone, {
-              onSuccess: () =>
-                navigate("/auth/verify", {
-                  state: {
-                    phone,
-                    from: location.state?.from,
-                    sentAt: Date.now(),
-                  },
-                }),
-            }),
-          )}
-        >
-          <Input
-            label="شماره موبایل"
-            dir="ltr"
-            type="tel"
-            autoComplete="tel"
-            placeholder="0912 345 6789"
-            {...form.register("phone")}
-          />
-          {form.formState.errors.phone && (
-            <p role="alert" className="error">
-              {form.formState.errors.phone.message}
-            </p>
-          )}
-          <Button full disabled={request.isPending}>
-            {request.isPending ? "در حال ارسال…" : "دریافت کد تأیید"}
+        <h1>{register ? "ثبت‌نام" : "ورود"}</h1>
+        <form noValidate onSubmit={submit}>
+          {register && <>
+            <Input label="نام" name="first_name" autoComplete="given-name" required maxLength={150} />
+            <Input label="نام خانوادگی" name="last_name" autoComplete="family-name" required maxLength={150} />
+          </>}
+          <PhoneField country={country} number={number}
+            onCountryChange={(value) => { setCountry(value); setError(""); }}
+            onNumberChange={(value) => { setNumber(value); setError(""); }} />
+          <Input label="رمز عبور" name="password" dir="ltr" required maxLength={128}
+            type={showPassword ? "text" : "password"}
+            autoComplete={register ? "new-password" : "current-password"} />
+          {register && <Input label="تکرار رمز عبور" name="password_confirmation" dir="ltr"
+            required maxLength={128} type={showPassword ? "text" : "password"} autoComplete="new-password" />}
+          <button type="button" className="text-button password-toggle"
+            aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>
+            {showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+          </button>
+          {error && <p role="alert" className="error">{error}</p>}
+          <Button full disabled={action.isPending}>
+            {action.isPending ? "در حال بررسی…" : register ? "ثبت‌نام" : "ورود"}
           </Button>
         </form>
-        <Link to="/privacy">حریم خصوصی</Link>
+        <Link to={register ? "/auth/login" : "/auth/register"} state={{ from: location.state?.from }}>
+          {register ? "ورود به حساب" : "ایجاد حساب"}
+        </Link>
       </section>
     </div>
   );
 }
-export function Verify() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const phone: string | undefined = location.state?.phone;
-  const [sentAt, setSentAt] = useState<number>(location.state?.sentAt ?? 0);
-  const [now, setNow] = useState(Date.now);
-  const remaining = Math.max(0, Math.ceil((sentAt + 60_000 - now) / 1000));
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const resend = useAction(
-    () => post(paths.auth + "otp/request/", { phone_number: phone }),
-    "کد دوباره ارسال شد.",
-  );
-  const verify = useAction(async (otp: string) => {
-    await post(paths.auth + "otp/verify/", { phone_number: phone, code: otp });
-    resetCsrf();
-    queryClient.removeQueries({
-      predicate: ({ queryKey }) =>
-        queryKey[0] === "private" && queryKey[1] !== "user",
-    });
-    await queryClient.invalidateQueries({ queryKey: userKey });
-    navigate(redirect(location.state?.from), { replace: true });
-  });
-  const form = useForm({
-    resolver: zodResolver(verifySchema),
-    defaultValues: { otp: "" },
-  });
-  if (!phone) return <Navigate to="/auth/login" replace />;
-  return (
-    <div className="auth-shell">
-      <section className="panel auth-card">
-        <ShieldCheck size={34} />
-        <h1>تأیید شماره موبایل</h1>
-        <p>
-          کد ارسال‌شده برای <bdi>{phone}</bdi> را وارد کنید.
-        </p>
-        <form onSubmit={form.handleSubmit(({ otp }) => verify.mutate(otp))}>
-          <Input
-            label="کد تأیید"
-            dir="ltr"
-            inputMode="numeric"
-            maxLength={6}
-            autoComplete="one-time-code"
-            {...form.register("otp")}
-          />
-          {form.formState.errors.otp && (
-            <p className="error" role="alert">
-              {form.formState.errors.otp.message}
-            </p>
-          )}
-          <Button full disabled={verify.isPending}>
-            {verify.isPending ? "در حال بررسی…" : "تأیید و ورود"}
-          </Button>
-        </form>
-        <div className="between">
-          <Link to="/auth/login" state={{ from: location.state?.from }}>
-            تغییر شماره
-          </Link>
-          <button
-            type="button"
-            className="text-button"
-            disabled={remaining > 0 || resend.isPending}
-            onClick={() =>
-              resend.mutate(undefined, {
-                onSuccess: () => setSentAt(Date.now()),
-              })
-            }
-          >
-            {remaining
-              ? `ارسال مجدد تا ${remaining.toLocaleString("fa-IR")} ثانیه`
-              : resend.isPending
-                ? "در حال ارسال…"
-                : "ارسال مجدد"}
-          </button>
-        </div>
-      </section>
-    </div>
-  );
+
+export function Login() {
+  return <CredentialsForm register={false} />;
+}
+
+export function Register() {
+  return <CredentialsForm register />;
 }

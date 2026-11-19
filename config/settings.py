@@ -256,9 +256,6 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
 
-    "DEFAULT_THROTTLE_RATES": {
-        "otp": "2/min",
-    },
 }
 
 
@@ -311,6 +308,11 @@ if JWT_COOKIE_SAMESITE == "None" and DEBUG:
 
 JWT_COOKIE_PATH = "/"
 
+# Trust only the declared number of reverse proxies that append X-Forwarded-For.
+AUTH_PROXY_HOPS = env.int("DJANGO_AUTH_PROXY_HOPS", default=0)
+if AUTH_PROXY_HOPS < 0:
+    raise ImproperlyConfigured("DJANGO_AUTH_PROXY_HOPS cannot be negative.")
+
 
 # --------------------------------------------------
 # CSRF Cookie
@@ -344,30 +346,6 @@ APPOINTMENT_PAYMENT_CARD = env.str(
 APPOINTMENT_RECEIPT_ROOT = (
     BASE_DIR / "private_media" / "appointment_receipts"
 )
-
-
-# --------------------------------------------------
-# SMS.ir
-# --------------------------------------------------
-
-SMSIR_API_KEY = env.str("SMSIR_API_KEY", default="").strip()
-
-SMSIR_OTP_TEMPLATE_ID = env.str(
-    "SMSIR_OTP_TEMPLATE_ID",
-    default="",
-).strip()
-
-
-if not DEBUG:
-    if not SMSIR_API_KEY:
-        raise ImproperlyConfigured("Set SMSIR_API_KEY for production SMS.ir delivery.")
-    if not (
-        SMSIR_OTP_TEMPLATE_ID.isascii()
-        and SMSIR_OTP_TEMPLATE_ID.isdecimal()
-        and len(SMSIR_OTP_TEMPLATE_ID) <= 10
-        and 0 < int(SMSIR_OTP_TEMPLATE_ID) <= 2147483647
-    ):
-        raise ImproperlyConfigured("Set SMSIR_OTP_TEMPLATE_ID to a positive template ID.")
 
 
 # --------------------------------------------------

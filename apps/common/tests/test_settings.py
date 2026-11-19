@@ -16,8 +16,6 @@ PRODUCTION = {
     "POSTGRES_USER": "test_user",
     "POSTGRES_PASSWORD": "test-password",
     "POSTGRES_HOST": "db",
-    "SMSIR_API_KEY": "test-key",
-    "SMSIR_OTP_TEMPLATE_ID": "123",
 }
 
 
@@ -70,8 +68,6 @@ def test_production_postgres_and_secure_cookies():
     ({"DJANGO_SECRET_KEY": "weak"}, "Set DJANGO_SECRET_KEY"),
     ({"DJANGO_ALLOWED_HOSTS": "*"}, "Set DJANGO_ALLOWED_HOSTS"),
     ({"POSTGRES_PASSWORD": ""}, "Set POSTGRES_PASSWORD"),
-    ({"SMSIR_API_KEY": ""}, "Set SMSIR_API_KEY"),
-    ({"SMSIR_OTP_TEMPLATE_ID": "2147483648"}, "Set SMSIR_OTP_TEMPLATE_ID"),
     ({"DJANGO_CORS_ALLOWED_ORIGINS": "http://app.example.test"}, "DJANGO_CORS_ALLOWED_ORIGINS requires"),
     ({"DJANGO_CSRF_TRUSTED_ORIGINS": "https://*.example.test"}, "DJANGO_CSRF_TRUSTED_ORIGINS requires"),
     ({"DJANGO_DEBUG": "True", "DJANGO_COOKIE_SAMESITE": "None"}, "Cross-site cookies require HTTPS"),

@@ -1,79 +1,37 @@
-from django.contrib.auth.hashers import check_password
-from django.contrib.auth import get_user_model
-from django.db import transaction
+from ipaddress import ip_address
+from secrets import randbelow
 
-from apps.accounts.managers import normalize_phone_number
-from apps.accounts.models import OTPCode
-from apps.accounts.services.otp import OTPError
+from django.conf import settings
+from django.db.models import F
+from django.utils import timezone
+from django.utils.crypto import salted_hmac
+from rest_framework.exceptions import Throttled
 
-User = get_user_model()
-
-MAX_OTP_ATTEMPTS = 5
+from apps.accounts.models import AuthAttempt
 
 
-def verify_otp(*, phone_number: str, code: str):
-    phone_number = normalize_phone_number(phone_number)
+WINDOW_SECONDS = 15 * 60
 
-    error_message = None
-    result = None
 
-    with transaction.atomic():
-        otp = (
-            OTPCode.objects.select_for_update()
-            .filter(
-                phone_number=phone_number,
-                is_used=False,
-            )
-            .order_by("-created_at")
-            .first()
-        )
+def client_ip(request):
+    hops = settings.AUTH_PROXY_HOPS
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")
+    if hops and len(forwarded) >= hops:
+        try:
+            return str(ip_address(forwarded[-hops].strip()))
+        except ValueError:
+            pass
+    return request.META.get("REMOTE_ADDR", "")
 
-        if otp is None:
-            error_message = "کد تأیید معتبر نیست."
 
-        elif otp.is_expired:
-            otp.is_used = True
-            otp.save(update_fields=["is_used"])
-            error_message = "کد تأیید منقضی شده است."
-
-        elif otp.attempts >= MAX_OTP_ATTEMPTS:
-            otp.is_used = True
-            otp.save(update_fields=["is_used"])
-            error_message = "تعداد تلاش‌های شما بیش از حد مجاز است."
-
-        elif not check_password(code, otp.code_hash):
-            otp.attempts += 1
-
-            if otp.attempts >= MAX_OTP_ATTEMPTS:
-                otp.is_used = True
-
-            otp.save(update_fields=["attempts", "is_used"])
-
-            error_message = "کد تأیید اشتباه است."
-
-        else:
-            otp.is_used = True
-            otp.save(update_fields=["is_used"])
-
-            user, created = User.objects.get_or_create(
-                phone_number=phone_number,
-                defaults={
-                    "is_active": True,
-                    "is_phone_verified": True,
-                },
-            )
-
-            if not user.is_active:
-                error_message = "حساب کاربری غیرفعال است."
-            else:
-                if not user.is_phone_verified:
-                    user.is_phone_verified = True
-                    user.save(update_fields=["is_phone_verified"])
-
-                result = (user, created)
-
-    # خطا خارج از تراکنش پرتاب می‌شود تا تغییرات بالا Rollback نشوند.
-    if error_message:
-        raise OTPError(error_message)
-
-    return result
+def limit_auth_attempt(scope, identifier, limit):
+    now = int(timezone.now().timestamp())
+    window, elapsed = divmod(now, WINDOW_SECONDS)
+    key = salted_hmac("accounts.auth_attempt", f"{scope}:{identifier}", algorithm="sha256").hexdigest()
+    if randbelow(128) == 0:
+        AuthAttempt.objects.filter(window__lt=window - 1).delete()
+    AuthAttempt.objects.get_or_create(key=key, defaults={"window": window})
+    AuthAttempt.objects.filter(key=key, window__lt=window).update(window=window, count=0)
+    updated = AuthAttempt.objects.filter(key=key, window=window, count__lt=limit).update(count=F("count") + 1)
+    if not updated:
+        raise Throttled(wait=WINDOW_SECONDS - elapsed)

@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import { DashboardLayout, SiteLayout } from "../components/layout";
 import { LoadingSkeleton, PageHeading } from "../components/ui";
-import { Login, RequireUser, Verify } from "../features/auth/auth";
+import { Login, Register, RequireUser } from "../features/auth/auth";
 const ApplicationDetail = lazy(() =>
   import("../features/applications/pages").then((module) => ({
     default: module.ApplicationDetail,
@@ -98,7 +98,7 @@ export function Router() {
             )}
             <Route path="blog/:slug" element={<Article />} />
             <Route path="auth/login" element={<Login />} />
-            <Route path="auth/verify" element={<Verify />} />
+            <Route path="auth/register" element={<Register />} />
             <Route element={<RequireUser />}>
               <Route path="applications/new" element={<ApplicationWizard />} />
               <Route element={<DashboardLayout />}>

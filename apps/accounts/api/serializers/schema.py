@@ -11,26 +11,15 @@ class CSRFResponseSerializer(serializers.Serializer):
     csrfToken = serializers.CharField()
 
 
-class OTPRequestResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
-
-
-class OTPVerifyResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
-    is_new_user = serializers.BooleanField()
-
-
 class UserResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     phone_number = serializers.CharField()
-    email = serializers.EmailField(allow_null=True)
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
     role = serializers.CharField()
     is_phone_verified = serializers.BooleanField()
 
 
 class MeResponseSerializer(serializers.Serializer):
-    user = UserResponseSerializer()
-
-
-class LogoutResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+    user = UserResponseSerializer()

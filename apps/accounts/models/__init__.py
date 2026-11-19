@@ -1,4 +1,4 @@
+from .auth_attempt import AuthAttempt
 from .user import User
-from .otp import OTPCode
 
-__all__ = ["User", "OTPCode"]
+__all__ = ["AuthAttempt", "User"]

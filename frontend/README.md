@@ -16,7 +16,7 @@ cp .env.example .env
 npm run dev
 ```
 
-4. آدرس چاپ‌شده توسط Vite را باز کنید. در توسعه، OTP پس از درخواست در لاگ بک‌اند ثبت می‌شود. برای تولید، بک‌اند به سرویس ارسال پیامک نیاز دارد.
+4. آدرس چاپ‌شده توسط Vite را باز کنید. با شمارهٔ تلفن و رمز عبور ثبت‌نام یا وارد شوید.
 
 ### آدرس و کوکی
 
@@ -30,7 +30,7 @@ npm run dev
 
 | حوزه | متد و مسیر |
 |---|---|
-| ورود | GET `auth/csrf/`، POST `auth/otp/request/`، POST `auth/otp/verify/`، POST `auth/token/refresh/`، GET `auth/me/`، POST `auth/logout/` |
+| ورود | GET `auth/csrf/`، POST `auth/register/`، POST `auth/login/`، POST `auth/token/refresh/`، GET `auth/me/`، POST `auth/logout/` |
 | مقصد و مشاور | GET `visas/countries/`، GET `consultants/` و `consultants/{slug}/`، GET `appointments/availability/?consultant={id}` |
 | پرونده | POST `visas/applications/`، GET `dashboard/applications/`، GET `dashboard/applications/{tracking_code}/` و `…/history/` |
 | مدارک | GET `dashboard/documents/`، POST `visas/applications/{tracking_code}/documents/`، GET `visas/documents/{id}/download/` |

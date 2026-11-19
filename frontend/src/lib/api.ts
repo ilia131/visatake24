@@ -33,16 +33,20 @@ export const queryClient = new QueryClient({
 let csrf: Promise<string> | undefined;
 let refresh: Promise<void> | undefined;
 
+function csrfHeader() {
+  csrf ??= wire
+    .get<{ csrfToken: string }>(paths.auth + "csrf/")
+    .then(({ data }) => data.csrfToken)
+    .catch((error) => {
+      csrf = undefined;
+      throw error;
+    });
+  return csrf;
+}
+
 api.interceptors.request.use(async (config) => {
   if (!["get", "head", "options"].includes(config.method || "get")) {
-    csrf ??= wire
-      .get<{ csrfToken: string }>(paths.auth + "csrf/")
-      .then(({ data }) => data.csrfToken)
-      .catch((error) => {
-        csrf = undefined;
-        throw error;
-      });
-    config.headers.set("X-CSRFToken", await csrf);
+    config.headers.set("X-CSRFToken", await csrfHeader());
   }
   return config;
 });
@@ -51,10 +55,10 @@ api.interceptors.response.use(undefined, async (error: unknown) => {
   if (!axios.isAxiosError(error) || !error.config || code(error) !== 401)
     throw error;
   const config = error.config as typeof error.config & { retried?: boolean };
-  if (config.retried || config.url?.includes("/auth/otp/")) throw error;
+  if (config.retried || [paths.auth + "login/", paths.auth + "register/", paths.auth + "logout/"].includes(config.url ?? "")) throw error;
   config.retried = true;
-  refresh ??= wire
-    .post(paths.auth + "token/refresh/")
+  refresh ??= csrfHeader()
+    .then((token) => wire.post(paths.auth + "token/refresh/", undefined, { headers: { "X-CSRFToken": token } }))
     .then(() => undefined)
     .finally(() => {
       refresh = undefined;
