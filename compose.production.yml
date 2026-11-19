@@ -1,0 +1,16 @@
+services:
+  frontend:
+    image: voyavisa-frontend:production
+
+  admin:
+    image: voyavisa-frontend:production
+    pull_policy: never
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"
+    volumes:
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    depends_on:
+      frontend:
+        condition: service_started
