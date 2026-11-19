@@ -1,17 +1,16 @@
-
 services:
   db:
     image: postgres:16-alpine
     container_name: voyavisa-db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    environment: &postgres_credentials
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,8 +24,10 @@ services:
     env_file:
       - .env
     environment:
+      <<: *postgres_credentials
       DJANGO_USE_SQLITE: "false"
       POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
     depends_on:
       db:
         condition: service_healthy
@@ -40,7 +41,15 @@ services:
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
 
     healthcheck:
-      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/api/v1/health/', timeout=3).close()"]
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          from urllib.request import Request, urlopen;
+          from config.settings import ALLOWED_HOSTS;
+          headers = {"Host": ALLOWED_HOSTS[0], "X-Forwarded-Proto": "https"};
+          urlopen(Request("http://127.0.0.1:8000/api/v1/health/", headers=headers), timeout=3).close()
       interval: 5s
       timeout: 4s
       retries: 6
@@ -55,9 +64,10 @@ services:
     container_name: voyavisa-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
     depends_on:
       backend:
         condition: service_healthy

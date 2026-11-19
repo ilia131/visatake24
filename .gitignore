@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 
 .env
+.env.*
+!.env.example
 db.sqlite3
 
 .pytest_cache/
@@ -14,4 +16,4 @@ media/
 
 .idea/
 .vscode/
-private_media/appointment_receipts/
+private_media/

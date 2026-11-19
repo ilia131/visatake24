@@ -1,11 +1,11 @@
-
-import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
+from django.http.request import split_domain_port
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -17,20 +17,29 @@ environ.Env.read_env(BASE_DIR / ".env")
 # Core
 # --------------------------------------------------
 
-DEBUG = env.bool("DJANGO_DEBUG", default=True)
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="")
-if not SECRET_KEY:
-    if not DEBUG:
-        raise ImproperlyConfigured(
-            "Set DJANGO_SECRET_KEY when DJANGO_DEBUG is False."
-        )
+if DEBUG and not SECRET_KEY:
     SECRET_KEY = get_random_secret_key()
+if not DEBUG and (
+    len(SECRET_KEY) < 50 or len(set(SECRET_KEY)) < 5 or SECRET_KEY.startswith("django-insecure-")
+):
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY to a strong, randomly generated secret.")
 
 ALLOWED_HOSTS = env.list(
     "DJANGO_ALLOWED_HOSTS",
-    default=["localhost", "127.0.0.1"],
+    default=["localhost", "127.0.0.1"] if DEBUG else [],
 )
+if not DEBUG and (
+    not ALLOWED_HOSTS
+    or any(
+        not host or host.startswith(".") or not split_domain_port(host)[0]
+        or split_domain_port(host)[1]
+        for host in ALLOWED_HOSTS
+    )
+):
+    raise ImproperlyConfigured("Set DJANGO_ALLOWED_HOSTS to explicit hostnames without ports.")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/New_York"
@@ -56,6 +65,35 @@ CSRF_TRUSTED_ORIGINS = env.list(
     default=[],
 )
 
+
+if not DEBUG:
+    for setting_name, origins in (
+        ("DJANGO_CORS_ALLOWED_ORIGINS", CORS_ALLOWED_ORIGINS),
+        ("DJANGO_CSRF_TRUSTED_ORIGINS", CSRF_TRUSTED_ORIGINS),
+    ):
+        for origin in origins:
+            try:
+                parsed = urlsplit(origin)
+                valid = (
+                    parsed.scheme == "https"
+                    and bool(parsed.hostname)
+                    and not parsed.username and parsed.password is None
+                    and not any((parsed.path, parsed.query, parsed.fragment))
+                    and "*" not in origin
+                    and (parsed.port is None or parsed.port > 0)
+                    and bool(split_domain_port(parsed.netloc)[0])
+                )
+            except ValueError:
+                valid = False
+            if not valid:
+                raise ImproperlyConfigured(f"{setting_name} requires explicit HTTPS origins.")
+
+    # The production frontend is reachable only through the trusted HTTPS ingress.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+
+SESSION_COOKIE_SECURE = not DEBUG
 
 # --------------------------------------------------
 # Applications
@@ -139,6 +177,8 @@ TEMPLATES = [
 
 POSTGRES_DB = env.str("POSTGRES_DB", default="")
 USE_SQLITE = env.bool("DJANGO_USE_SQLITE", default=DEBUG and not POSTGRES_DB)
+if not DEBUG and USE_SQLITE:
+    raise ImproperlyConfigured("Production requires PostgreSQL. Set DJANGO_USE_SQLITE=False.")
 
 if USE_SQLITE:
     DATABASES = {
@@ -149,14 +189,26 @@ if USE_SQLITE:
         }
     }
 else:
+    database_values = {
+        "NAME": POSTGRES_DB,
+        "USER": env.str("POSTGRES_USER", default=""),
+        "PASSWORD": env.str("POSTGRES_PASSWORD", default=""),
+        "HOST": env.str("POSTGRES_HOST", default=""),
+        "PORT": env.str("POSTGRES_PORT", default="5432"),
+    }
+    if not DEBUG:
+        for field in ("NAME", "USER", "PASSWORD", "HOST"):
+            if not database_values[field].strip():
+                variable = "POSTGRES_DB" if field == "NAME" else f"POSTGRES_{field}"
+                raise ImproperlyConfigured(f"Set {variable} for production PostgreSQL.")
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": POSTGRES_DB or "voyavisa",
-            "USER": env.str("POSTGRES_USER", default="postgres"),
-            "PASSWORD": env.str("POSTGRES_PASSWORD", default=""),
-            "HOST": env.str("POSTGRES_HOST", default="localhost"),
-            "PORT": env.str("POSTGRES_PORT", default="5432"),
+            **database_values,
+            "NAME": database_values["NAME"] or "voyavisa",
+            "USER": database_values["USER"] or "postgres",
+            "HOST": database_values["HOST"] or "localhost",
             "CONN_MAX_AGE": 60,
             "CONN_HEALTH_CHECKS": True,
         }
@@ -304,6 +356,18 @@ SMSIR_OTP_TEMPLATE_ID = env.str(
     "SMSIR_OTP_TEMPLATE_ID",
     default="",
 ).strip()
+
+
+if not DEBUG:
+    if not SMSIR_API_KEY:
+        raise ImproperlyConfigured("Set SMSIR_API_KEY for production SMS.ir delivery.")
+    if not (
+        SMSIR_OTP_TEMPLATE_ID.isascii()
+        and SMSIR_OTP_TEMPLATE_ID.isdecimal()
+        and len(SMSIR_OTP_TEMPLATE_ID) <= 10
+        and 0 < int(SMSIR_OTP_TEMPLATE_ID) <= 2147483647
+    ):
+        raise ImproperlyConfigured("Set SMSIR_OTP_TEMPLATE_ID to a positive template ID.")
 
 
 # --------------------------------------------------

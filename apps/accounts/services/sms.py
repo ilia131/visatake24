@@ -24,7 +24,7 @@ def send_sms_otp(phone_number: str, code: str) -> None:
     except (TypeError, ValueError) as exc:
         raise SMSIRError("Invalid SMS.ir template ID.") from exc
 
-    if template_id <= 0:
+    if not 0 < template_id <= 2147483647:
         raise SMSIRError("Invalid SMS.ir template ID.")
 
     if not re.fullmatch(r"\+989[0-9]{9}", phone_number):
