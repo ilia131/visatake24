@@ -1,0 +1,2741 @@
+openapi: 3.0.3
+info:
+  title: VoyaVisa API
+  version: 1.0.0
+  description: VoyaVisa Visa and Travel Services API
+paths:
+  /api/v1/appointments/:
+    get:
+      operationId: v1_appointments_list
+      description: فهرست رزروهای کاربر جاری.
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+    post:
+      operationId: v1_appointments_create
+      description: مالک درخواست یک زمان آزاد را رزرو می‌کند.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/{id}/:
+    get:
+      operationId: v1_appointments_retrieve
+      description: جزئیات برای مالک رزرو.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+  /api/v1/appointments/{id}/cancel/:
+    post:
+      operationId: v1_appointments_cancel_create
+      description: لغو رزرو توسط مالک، مطابق قواعد لغو پروژه.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/{id}/payment-receipt/:
+    post:
+      operationId: v1_appointments_payment_receipt_create
+      description: ارسال یا جایگزینی رسید توسط مالک. فرمت JPEG، PNG یا PDF تا ۵ مگابایت.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - payment_receipt
+              properties:
+                payment_receipt:
+                  type: string
+                  format: binary
+            encoding:
+              payment_receipt:
+                contentType: image/jpeg, image/png, application/pdf
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+        '415':
+          description: نوع بدنه پشتیبانی نمی‌شود.
+  /api/v1/appointments/{id}/payment-receipt/download/:
+    get:
+      operationId: v1_appointments_payment_receipt_download_retrieve
+      description: دانلود فایل خصوصی توسط مالک، مشاور رزرو یا بررسی‌کننده مجاز.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+  /api/v1/appointments/admin/payments/:
+    get:
+      operationId: v1_appointments_admin_payments_list
+      description: صف رسیدهای در انتظار بررسی برای مدیر یا دارنده مجوز بررسی پرداخت.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: یک شماره صفحه‌ در مجموعه نتایج صفحه‌بندی شده.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAppointmentReviewList'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+  /api/v1/appointments/admin/payments/{id}/:
+    get:
+      operationId: v1_appointments_admin_payments_retrieve
+      description: جزئیات پرداخت و لینک دانلود خصوصی برای بررسی‌کننده.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+  /api/v1/appointments/admin/payments/{id}/approve/:
+    post:
+      operationId: v1_appointments_admin_payments_approve_create
+      description: تأیید رسید در انتظار بررسی و قطعی کردن رزرو توسط بررسی‌کننده مجاز.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/admin/payments/{id}/reject/:
+    post:
+      operationId: v1_appointments_admin_payments_reject_create
+      description: رد رسید توسط بررسی‌کننده مجاز و آزاد شدن زمان. بارگذاری مجدد در
+        صورت آزاد بودن زمان مجاز است.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentReject'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentReject'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentReject'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/availability/:
+    get:
+      operationId: v1_appointments_availability_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Availability'
+          description: ''
+  /api/v1/appointments/availability/{id}/:
+    get:
+      operationId: v1_appointments_availability_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Availability'
+          description: ''
+  /api/v1/appointments/availability/manage/:
+    get:
+      operationId: v1_appointments_availability_manage_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Availability'
+          description: ''
+    post:
+      operationId: v1_appointments_availability_manage_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AvailabilityCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AvailabilityCreate'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityCreate'
+          description: ''
+  /api/v1/appointments/availability/manage/{id}/:
+    get:
+      operationId: v1_appointments_availability_manage_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityCreate'
+          description: ''
+    put:
+      operationId: v1_appointments_availability_manage_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AvailabilityCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AvailabilityCreate'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityCreate'
+          description: ''
+    patch:
+      operationId: v1_appointments_availability_manage_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAvailabilityCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAvailabilityCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAvailabilityCreate'
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityCreate'
+          description: ''
+    delete:
+      operationId: v1_appointments_availability_manage_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/appointments/consultant/:
+    get:
+      operationId: v1_appointments_consultant_list
+      description: فهرست رزروهای مشاور جاری.
+      parameters:
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+        description: تاریخ جلسه به وقت تهران
+      - name: page
+        required: false
+        in: query
+        description: یک شماره صفحه‌ در مجموعه نتایج صفحه‌بندی شده.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          enum:
+          - pending
+          - awaiting_payment
+          - payment_submitted
+          - payment_rejected
+          - rejected
+          - confirmed
+          - cancelled
+          - completed
+          type: string
+          minLength: 1
+        description: |-
+          * `pending` - در انتظار تأیید مشاور
+          * `awaiting_payment` - در انتظار پرداخت
+          * `payment_submitted` - در انتظار بررسی رسید
+          * `payment_rejected` - پرداخت رد شده
+          * `rejected` - درخواست رد شده
+          * `confirmed` - رزرو قطعی
+          * `cancelled` - لغو شده
+          * `completed` - انجام شده
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAppointmentReviewList'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/consultant/{id}/:
+    get:
+      operationId: v1_appointments_consultant_retrieve
+      description: جزئیات برای مشاور همین رزرو.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+  /api/v1/appointments/consultant/{id}/approve/:
+    post:
+      operationId: v1_appointments_consultant_approve_create
+      description: تأیید درخواست در انتظار توسط مشاور تعیین‌شده و فعال شدن اطلاعات
+        پرداخت برای مالک.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/consultant/{id}/complete/:
+    post:
+      operationId: v1_appointments_consultant_complete_create
+      description: ثبت پایان جلسه توسط مشاور تعیین‌شده، پس از پایان زمان جلسه قطعی.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/appointments/consultant/{id}/reject/:
+    post:
+      operationId: v1_appointments_consultant_reject_create
+      description: رد درخواست در انتظار توسط مشاور تعیین‌شده و آزاد شدن زمان.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsultantReject'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsultantReject'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsultantReject'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentReview'
+          description: ''
+        '401':
+          description: احراز هویت الزامی است.
+        '403':
+          description: مجوز لازم وجود ندارد یا CSRF معتبر نیست.
+        '404':
+          description: رزرو یا فایل قابل دسترسی نیست.
+        '400':
+          description: ورودی، وضعیت رزرو یا زمان انتخاب‌شده معتبر نیست.
+  /api/v1/auth/csrf/:
+    get:
+      operationId: v1_auth_csrf_retrieve
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CSRFResponse'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: v1_auth_logout_create
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+          description: ''
+  /api/v1/auth/me/:
+    get:
+      operationId: v1_auth_me_retrieve
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+          description: ''
+  /api/v1/auth/otp/request/:
+    post:
+      operationId: v1_auth_otp_request_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPRequestResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+          description: ''
+  /api/v1/auth/otp/verify/:
+    post:
+      operationId: v1_auth_otp_verify_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerify'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OTPVerify'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OTPVerify'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_new_user:
+                    type: boolean
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: v1_auth_token_refresh_create
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+          description: ''
+  /api/v1/consultants/:
+    get:
+      operationId: v1_consultants_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: کدام فیلد باید هنگام مرتب‌سازی نتایج استفاده شود.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: یک عبارت جستجو.
+        schema:
+          type: string
+      - in: query
+        name: specialties__slug
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Consultant'
+          description: ''
+  /api/v1/consultants/{slug}/:
+    get:
+      operationId: v1_consultants_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Consultant'
+          description: ''
+  /api/v1/consultants/assignments/assign/:
+    post:
+      operationId: v1_consultants_assignments_assign_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignmentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignmentCreate'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+  /api/v1/consultants/assignments/manage/:
+    get:
+      operationId: v1_consultants_assignments_manage_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+          description: ''
+  /api/v1/consultants/manage/:
+    get:
+      operationId: v1_consultants_manage_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsultantAdmin'
+          description: ''
+    post:
+      operationId: v1_consultants_manage_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsultantAdmin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsultantAdmin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsultantAdmin'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultantAdmin'
+          description: ''
+  /api/v1/consultants/manage/{id}/:
+    get:
+      operationId: v1_consultants_manage_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultantAdmin'
+          description: ''
+    put:
+      operationId: v1_consultants_manage_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsultantAdmin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConsultantAdmin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConsultantAdmin'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultantAdmin'
+          description: ''
+    patch:
+      operationId: v1_consultants_manage_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConsultantAdmin'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConsultantAdmin'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConsultantAdmin'
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultantAdmin'
+          description: ''
+    delete:
+      operationId: v1_consultants_manage_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/consultants/my-assignments/:
+    get:
+      operationId: v1_consultants_my_assignments_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+          description: ''
+  /api/v1/consultants/my-assignments/{id}/status/:
+    patch:
+      operationId: v1_consultants_my_assignments_status_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignmentStatus'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignmentStatus'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAssignmentStatus'
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assignment'
+          description: ''
+  /api/v1/dashboard/applications/:
+    get:
+      operationId: v1_dashboard_applications_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationList'
+          description: ''
+  /api/v1/dashboard/applications/{tracking_code}/:
+    get:
+      operationId: v1_dashboard_applications_retrieve
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+          description: ''
+  /api/v1/dashboard/applications/{tracking_code}/history/:
+    get:
+      operationId: v1_dashboard_applications_history_list
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationHistory'
+          description: ''
+  /api/v1/dashboard/appointments/:
+    get:
+      operationId: v1_dashboard_appointments_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DashboardAppointment'
+          description: ''
+  /api/v1/dashboard/documents/:
+    get:
+      operationId: v1_dashboard_documents_list
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DashboardDocument'
+          description: ''
+  /api/v1/dashboard/overview/:
+    get:
+      operationId: v1_dashboard_overview_retrieve
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardOverview'
+          description: ''
+  /api/v1/dashboard/profile/:
+    get:
+      operationId: v1_dashboard_profile_retrieve
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardProfile'
+          description: ''
+    patch:
+      operationId: v1_dashboard_profile_partial_update
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDashboardProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDashboardProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDashboardProfile'
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardProfile'
+          description: ''
+  /api/v1/health/:
+    get:
+      operationId: v1_health_retrieve
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  service:
+                    type: string
+                  status:
+                    type: string
+          description: ''
+  /api/v1/visas/{application_id}/history/:
+    get:
+      operationId: v1_visas_history_list
+      parameters:
+      - in: path
+        name: application_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisaApplicationHistory'
+          description: ''
+  /api/v1/visas/applications/:
+    get:
+      operationId: v1_visas_applications_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: یک شماره صفحه‌ در مجموعه نتایج صفحه‌بندی شده.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: تعداد نتایج برای نمایش در هر صفحه.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVisaApplicationList'
+          description: ''
+    post:
+      operationId: v1_visas_applications_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationCreate'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisaApplicationCreate'
+          description: ''
+  /api/v1/visas/applications/{tracking_code}/:
+    get:
+      operationId: v1_visas_applications_retrieve
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisaApplication'
+          description: ''
+  /api/v1/visas/applications/{tracking_code}/documents/:
+    get:
+      operationId: v1_visas_applications_documents_list
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisaApplicationDocumentUpload'
+          description: ''
+    post:
+      operationId: v1_visas_applications_documents_create
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationDocumentUpload'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationDocumentUpload'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisaApplicationDocumentUpload'
+          description: ''
+  /api/v1/visas/applications/{tracking_code}/history/:
+    get:
+      operationId: v1_visas_applications_history_list
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisaApplicationHistory'
+          description: ''
+  /api/v1/visas/applications/{tracking_code}/status/:
+    put:
+      operationId: v1_visas_applications_status_update
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationStatusUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationStatusUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VisaApplicationStatusUpdate'
+        required: true
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisaApplicationStatusUpdate'
+          description: ''
+    patch:
+      operationId: v1_visas_applications_status_partial_update
+      parameters:
+      - in: path
+        name: tracking_code
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVisaApplicationStatusUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVisaApplicationStatusUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVisaApplicationStatusUpdate'
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisaApplicationStatusUpdate'
+          description: ''
+  /api/v1/visas/countries/:
+    get:
+      operationId: v1_visas_countries_list
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+          description: ''
+  /api/v1/visas/documents/{document_id}/download/:
+    get:
+      operationId: v1_visas_documents_download_retrieve
+      description: دانلود مدرک توسط مالک درخواست یا مدیر مجاز.
+      summary: دانلود مدرک درخواست ویزا
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - CookieJWT: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: فایل مدرک
+components:
+  schemas:
+    ApplicationDetail:
+      type: object
+      properties:
+        tracking_code:
+          type: string
+          readOnly: true
+          title: کد پیگیری
+        country_name:
+          type: string
+          readOnly: true
+        visa_type:
+          type: string
+          title: نوع ویزا
+          maxLength: 100
+        travel_date:
+          type: string
+          format: date
+          title: تاریخ سفر
+        return_date:
+          type: string
+          format: date
+          nullable: true
+          title: تاریخ بازگشت
+        purpose:
+          type: string
+          title: هدف سفر
+        additional_notes:
+          type: string
+          title: توضیحات تکمیلی
+        status:
+          allOf:
+          - $ref: '#/components/schemas/NewStatusEnum'
+          title: وضعیت درخواست
+        status_display:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        consultant:
+          type: string
+          readOnly: true
+      required:
+      - consultant
+      - country_name
+      - created_at
+      - purpose
+      - status_display
+      - tracking_code
+      - travel_date
+      - updated_at
+      - visa_type
+    ApplicationHistory:
+      type: object
+      properties:
+        previous_status:
+          title: وضعیت قبلی
+          oneOf:
+          - $ref: '#/components/schemas/NewStatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        previous_status_display:
+          type: string
+          readOnly: true
+        new_status:
+          allOf:
+          - $ref: '#/components/schemas/NewStatusEnum'
+          title: وضعیت جدید
+        new_status_display:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          title: توضیحات تغییر
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: زمان تغییر
+      required:
+      - created_at
+      - new_status
+      - new_status_display
+      - previous_status_display
+    ApplicationList:
+      type: object
+      properties:
+        tracking_code:
+          type: string
+          readOnly: true
+          title: کد پیگیری
+        country_name:
+          type: string
+          readOnly: true
+        visa_type:
+          type: string
+          title: نوع ویزا
+          maxLength: 100
+        travel_date:
+          type: string
+          format: date
+          title: تاریخ سفر
+        return_date:
+          type: string
+          format: date
+          nullable: true
+          title: تاریخ بازگشت
+        status:
+          allOf:
+          - $ref: '#/components/schemas/NewStatusEnum'
+          title: وضعیت درخواست
+        status_display:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - country_name
+      - created_at
+      - status_display
+      - tracking_code
+      - travel_date
+      - updated_at
+      - visa_type
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        availability:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status328Enum'
+          readOnly: true
+          default: pending
+        user_note:
+          type: string
+          readOnly: true
+        consultation_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          readOnly: true
+        rejection_reason:
+          type: string
+          readOnly: true
+        payment_card:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_receipt_url:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        payment_note:
+          type: string
+          readOnly: true
+        payment_submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        payment_reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        consultant_approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - availability
+      - confirmed_at
+      - consultant_approved_at
+      - consultation_fee
+      - created_at
+      - id
+      - payment_card
+      - payment_note
+      - payment_receipt_url
+      - payment_reviewed_at
+      - payment_submitted_at
+      - rejection_reason
+      - status
+      - updated_at
+      - user_note
+    AppointmentCreate:
+      type: object
+      properties:
+        availability_id:
+          type: integer
+          minimum: 1
+        user_note:
+          type: string
+      required:
+      - availability_id
+    AppointmentReview:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        availability:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status328Enum'
+          readOnly: true
+          default: pending
+        user_note:
+          type: string
+          readOnly: true
+        consultation_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          readOnly: true
+        rejection_reason:
+          type: string
+          readOnly: true
+        payment_card:
+          type: string
+          nullable: true
+          readOnly: true
+        payment_receipt_url:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        payment_note:
+          type: string
+          readOnly: true
+        payment_submitted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        payment_reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        consultant_approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        applicant_name:
+          type: string
+          readOnly: true
+        consultant_name:
+          type: string
+          readOnly: true
+        start_at:
+          type: string
+          format: date-time
+          readOnly: true
+        end_at:
+          type: string
+          format: date-time
+          readOnly: true
+        payment_reviewed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+      required:
+      - applicant_name
+      - availability
+      - confirmed_at
+      - consultant_approved_at
+      - consultant_name
+      - consultation_fee
+      - created_at
+      - end_at
+      - id
+      - payment_card
+      - payment_note
+      - payment_receipt_url
+      - payment_reviewed_at
+      - payment_reviewed_by
+      - payment_submitted_at
+      - rejection_reason
+      - start_at
+      - status
+      - updated_at
+      - user_note
+    Assignment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        application:
+          type: integer
+          readOnly: true
+        consultant:
+          type: integer
+          readOnly: true
+        consultant_name:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusD9aEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+          default: true
+        admin_note:
+          type: string
+          readOnly: true
+        consultant_note:
+          type: string
+          readOnly: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_note
+      - application
+      - assigned_at
+      - consultant
+      - consultant_name
+      - consultant_note
+      - id
+      - is_active
+      - status
+      - updated_at
+    AssignmentCreate:
+      type: object
+      properties:
+        application_id:
+          type: integer
+          minimum: 1
+        consultant_id:
+          type: integer
+          minimum: 1
+      required:
+      - application_id
+      - consultant_id
+    Availability:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        consultant:
+          type: integer
+          readOnly: true
+        consultant_name:
+          type: string
+          readOnly: true
+        consultant_slug:
+          type: string
+          readOnly: true
+        start_at:
+          type: string
+          format: date-time
+          readOnly: true
+        end_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityStatusEnum'
+          readOnly: true
+      required:
+      - consultant
+      - consultant_name
+      - consultant_slug
+      - end_at
+      - id
+      - start_at
+      - status
+    AvailabilityCreate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        consultant:
+          type: integer
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+      required:
+      - consultant
+      - end_at
+      - id
+      - start_at
+    AvailabilityStatusEnum:
+      enum:
+      - available
+      - blocked
+      type: string
+      description: |-
+        * `available` - آزاد
+        * `blocked` - مسدود
+    BlankEnum:
+      enum:
+      - ''
+    CSRFResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        csrfToken:
+          type: string
+      required:
+      - csrfToken
+      - success
+    Consultant:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-\w]+$
+        title:
+          type: string
+          readOnly: true
+        bio:
+          type: string
+          readOnly: true
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        specialties:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsultantSpecialty'
+          readOnly: true
+        experience_years:
+          type: integer
+          readOnly: true
+        consultation_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          readOnly: true
+          description: مبلغ به تومان
+        is_verified:
+          type: boolean
+          readOnly: true
+      required:
+      - avatar
+      - bio
+      - consultation_fee
+      - experience_years
+      - full_name
+      - id
+      - is_verified
+      - slug
+      - specialties
+      - title
+    ConsultantAdmin:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          nullable: true
+        full_name:
+          type: string
+          maxLength: 150
+        slug:
+          type: string
+          pattern: ^[-\w]+$
+          maxLength: 180
+        title:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        specialties:
+          type: array
+          items:
+            type: integer
+        experience_years:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        consultation_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          description: مبلغ به تومان
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+        display_order:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - bio
+      - created_at
+      - full_name
+      - id
+      - slug
+      - title
+      - updated_at
+    ConsultantReject:
+      type: object
+      properties:
+        rejection_reason:
+          type: string
+          maxLength: 4000
+      required:
+      - rejection_reason
+    ConsultantSpecialty:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: نام تخصص
+          maxLength: 100
+        slug:
+          type: string
+          pattern: ^[-\w]+$
+          maxLength: 120
+        description:
+          type: string
+          title: توضیحات
+      required:
+      - id
+      - name
+      - slug
+    Country:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: نام کشور
+          maxLength: 100
+        name_en:
+          type: string
+          title: نام انگلیسی
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 120
+          pattern: ^[-a-zA-Z0-9_]+$
+        flag:
+          type: string
+          title: پرچم
+          maxLength: 10
+        description:
+          type: string
+          title: توضیحات
+      required:
+      - id
+      - name
+      - name_en
+      - slug
+    DashboardAppointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        consultant_name:
+          type: string
+          readOnly: true
+        consultant_title:
+          type: string
+          readOnly: true
+        start_at:
+          type: string
+          format: date-time
+          readOnly: true
+        end_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/Status328Enum'
+        status_display:
+          type: string
+          readOnly: true
+        user_note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - consultant_name
+      - consultant_title
+      - created_at
+      - end_at
+      - id
+      - start_at
+      - status_display
+    DashboardDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        tracking_code:
+          type: string
+          readOnly: true
+        document_type:
+          allOf:
+          - $ref: '#/components/schemas/DocumentTypeEnum'
+          title: نوع مدرک
+        document_type_display:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status3dcEnum'
+          title: وضعیت مدرک
+        status_display:
+          type: string
+          readOnly: true
+        admin_notes:
+          type: string
+          title: یادداشت مدیر
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - document_type
+      - document_type_display
+      - id
+      - status_display
+      - tracking_code
+      - updated_at
+      - uploaded_at
+    DashboardOverview:
+      type: object
+      properties:
+        total_applications:
+          type: integer
+        active_applications:
+          type: integer
+        status_counts:
+          type: object
+          additionalProperties: {}
+        total_appointments:
+          type: integer
+        upcoming_appointments:
+          type: integer
+      required:
+      - active_applications
+      - status_counts
+      - total_applications
+      - total_appointments
+      - upcoming_appointments
+    DashboardProfile:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          readOnly: true
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+        first_name:
+          type: string
+        last_name:
+          type: string
+      required:
+      - phone_number
+    DocumentTypeEnum:
+      enum:
+      - passport
+      - photo
+      - bank_statement
+      - employment
+      - travel_insurance
+      - other
+      type: string
+      description: |-
+        * `passport` - پاسپورت
+        * `photo` - عکس پرسنلی
+        * `bank_statement` - گردش حساب
+        * `employment` - گواهی اشتغال
+        * `travel_insurance` - بیمه مسافرتی
+        * `other` - سایر مدارک
+    LogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
+    MeResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+      required:
+      - user
+    NewStatusEnum:
+      enum:
+      - submitted
+      - under_review
+      - need_info
+      - approved
+      - rejected
+      - completed
+      type: string
+      description: |-
+        * `submitted` - ثبت شده
+        * `under_review` - در حال بررسی
+        * `need_info` - نیازمند اطلاعات بیشتر
+        * `approved` - تأیید شده
+        * `rejected` - رد شده
+        * `completed` - تکمیل شده
+    OTPRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          maxLength: 16
+      required:
+      - phone_number
+    OTPRequestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
+    OTPVerify:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          maxLength: 16
+        code:
+          type: string
+          pattern: ^\d{6}$
+      required:
+      - code
+      - phone_number
+    PaginatedAppointmentReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentReview'
+    PaginatedVisaApplicationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisaApplication'
+    PatchedAssignmentStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusD9aEnum'
+        consultant_note:
+          type: string
+          maxLength: 5000
+    PatchedAvailabilityCreate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        consultant:
+          type: integer
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+    PatchedConsultantAdmin:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          nullable: true
+        full_name:
+          type: string
+          maxLength: 150
+        slug:
+          type: string
+          pattern: ^[-\w]+$
+          maxLength: 180
+        title:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        specialties:
+          type: array
+          items:
+            type: integer
+        experience_years:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        consultation_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,0})?$
+          description: مبلغ به تومان
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+        display_order:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedDashboardProfile:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          readOnly: true
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+        first_name:
+          type: string
+        last_name:
+          type: string
+    PatchedVisaApplicationStatusUpdate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/NewStatusEnum'
+        admin_notes:
+          type: string
+          maxLength: 5000
+    PaymentReject:
+      type: object
+      properties:
+        payment_note:
+          type: string
+          maxLength: 4000
+      required:
+      - payment_note
+    Status328Enum:
+      enum:
+      - pending
+      - awaiting_payment
+      - payment_submitted
+      - payment_rejected
+      - rejected
+      - confirmed
+      - cancelled
+      - completed
+      type: string
+      description: |-
+        * `pending` - در انتظار تأیید مشاور
+        * `awaiting_payment` - در انتظار پرداخت
+        * `payment_submitted` - در انتظار بررسی رسید
+        * `payment_rejected` - پرداخت رد شده
+        * `rejected` - درخواست رد شده
+        * `confirmed` - رزرو قطعی
+        * `cancelled` - لغو شده
+        * `completed` - انجام شده
+    Status3dcEnum:
+      enum:
+      - pending
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `pending` - در انتظار بررسی
+        * `approved` - تأیید شده
+        * `rejected` - رد شده
+    StatusD9aEnum:
+      enum:
+      - assigned
+      - in_progress
+      - needs_documents
+      - completed
+      - rejected
+      type: string
+      description: |-
+        * `assigned` - ارجاع شده
+        * `in_progress` - در حال بررسی
+        * `needs_documents` - نیازمند مدارک
+        * `completed` - تکمیل شده
+        * `rejected` - رد شده
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        phone_number:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        role:
+          type: string
+        is_phone_verified:
+          type: boolean
+      required:
+      - email
+      - id
+      - is_phone_verified
+      - phone_number
+      - role
+    VisaApplication:
+      type: object
+      properties:
+        tracking_code:
+          type: string
+          readOnly: true
+          title: کد پیگیری
+        country:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            name_en:
+              type: string
+            slug:
+              type: string
+            flag:
+              type: string
+          readOnly: true
+        visa_type:
+          type: string
+          readOnly: true
+          title: نوع ویزا
+        travel_date:
+          type: string
+          format: date
+          readOnly: true
+          title: تاریخ سفر
+        return_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          title: تاریخ بازگشت
+        purpose:
+          type: string
+          readOnly: true
+          title: هدف سفر
+        additional_notes:
+          type: string
+          readOnly: true
+          title: توضیحات تکمیلی
+        status:
+          allOf:
+          - $ref: '#/components/schemas/NewStatusEnum'
+          readOnly: true
+          title: وضعیت درخواست
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - additional_notes
+      - country
+      - created_at
+      - purpose
+      - return_date
+      - status
+      - tracking_code
+      - travel_date
+      - updated_at
+      - visa_type
+    VisaApplicationCreate:
+      type: object
+      properties:
+        country:
+          type: integer
+          title: کشور مقصد
+        visa_type:
+          type: string
+          title: نوع ویزا
+          maxLength: 100
+        travel_date:
+          type: string
+          format: date
+          title: تاریخ سفر
+        return_date:
+          type: string
+          format: date
+          nullable: true
+          title: تاریخ بازگشت
+        purpose:
+          type: string
+          title: هدف سفر
+        additional_notes:
+          type: string
+          title: توضیحات تکمیلی
+      required:
+      - country
+      - purpose
+      - travel_date
+      - visa_type
+    VisaApplicationDocumentUpload:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        document_type:
+          allOf:
+          - $ref: '#/components/schemas/DocumentTypeEnum'
+          title: نوع مدرک
+        file:
+          type: string
+          format: uri
+          title: فایل مدرک
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status3dcEnum'
+          readOnly: true
+          title: وضعیت مدرک
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - document_type
+      - file
+      - id
+      - status
+      - uploaded_at
+    VisaApplicationHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        old_status:
+          type: string
+          maxLength: 50
+        new_status:
+          type: string
+          maxLength: 50
+        description:
+          type: string
+        changed_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - changed_by_name
+      - created_at
+      - id
+      - new_status
+    VisaApplicationStatusUpdate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/NewStatusEnum'
+        admin_notes:
+          type: string
+          maxLength: 5000
+      required:
+      - status
+  securitySchemes:
+    CookieJWT:
+      type: apiKey
+      in: cookie
+      name: voyavisa_access
