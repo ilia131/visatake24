@@ -27,6 +27,7 @@ from apps.accounts.api.serializers.schema import (
 )
 
 from apps.accounts.services.authentication import verify_otp
+from apps.accounts.services.sms import SMSIRError
 from apps.accounts.api.serializers.authentication import (
     OTPRequestSerializer,
     OTPVerifySerializer,
@@ -48,6 +49,7 @@ class OTPRequestThrottle(AnonRateThrottle):
     responses={
         200: OTPRequestResponseSerializer,
         429: SuccessSerializer,
+        503: OTPRequestResponseSerializer,
     },
 )
 class OTPRequestAPIView(APIView):
@@ -69,6 +71,12 @@ class OTPRequestAPIView(APIView):
                 phone_number=serializer.validated_data[
                     "phone_number"
                 ]
+            )
+
+        except SMSIRError:
+            return Response(
+                {"success": False, "message": "SMS delivery is unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         except OTPError as exc:

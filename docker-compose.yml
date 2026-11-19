@@ -24,12 +24,16 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DJANGO_USE_SQLITE: "false"
+      POSTGRES_HOST: db
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - static_data:/app/staticfiles
       - media_data:/app/media
+      - private_media_data:/app/private_media
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
@@ -52,3 +56,4 @@ volumes:
   postgres_data:
   static_data:
   media_data:
+  private_media_data:

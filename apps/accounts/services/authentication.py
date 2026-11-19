@@ -19,7 +19,7 @@ def verify_otp(*, phone_number: str, code: str):
 
     with transaction.atomic():
         otp = (
-            OTPCode.objects
+            OTPCode.objects.select_for_update()
             .filter(
                 phone_number=phone_number,
                 is_used=False,

@@ -1,10 +1,8 @@
 
 import secrets
-import logging
 
 from datetime import timedelta
 
-from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -14,7 +12,7 @@ from apps.accounts.models import OTPCode
 from apps.accounts.managers import normalize_phone_number
 
 
-logger = logging.getLogger(__name__)
+from apps.accounts.services.sms import send_sms_otp
 
 
 OTP_LENGTH = 6
@@ -33,21 +31,7 @@ def generate_otp():
 
 
 def send_otp(*, phone_number, code):
-    """
-    Development delivery adapter.
-    Replace with an SMS provider in production.
-    Never expose OTP in API responses.
-    """
-    if not settings.DEBUG:
-        raise RuntimeError(
-            "Development OTP delivery is disabled in production."
-        )
-
-    logger.warning(
-        "VOYAVISA DEVELOPMENT OTP | %s | %s",
-        phone_number,
-        code,
-    )
+    return send_sms_otp(phone_number, code)
 
 
 @transaction.atomic

@@ -12,7 +12,7 @@ Django 6.1 و Django REST Framework برای احراز هویت، ویزا، د
 | `DJANGO_CORS_ALLOWED_ORIGINS` | مبدأهای مجاز درخواست مرورگر با scheme و پورت. برای پروکسی هم‌مبدأ خالی بماند. |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | مبدأهای مورد اعتماد Django برای درخواست تغییردهنده. از scheme و پورت واقعی استفاده کنید. |
 | `DJANGO_COOKIE_SAMESITE` | پیش‌فرض `Lax`. مقدار `None` برای سایت‌های مجزا به HTTPS و پذیرش کوکی توسط مرورگر نیاز دارد. |
-| `POSTGRES_DB`، `POSTGRES_USER`، `POSTGRES_PASSWORD`، `POSTGRES_HOST`، `POSTGRES_PORT` | تنظیمات PostgreSQL. با حذف `POSTGRES_DB`، SQLite محلی استفاده می‌شود. |
+| `POSTGRES_DB`، `POSTGRES_USER`، `POSTGRES_PASSWORD`، `POSTGRES_HOST`، `POSTGRES_PORT` | تنظیمات PostgreSQL. SQLite در حالت توسعه و بدون `POSTGRES_DB` پیش‌فرض است. Docker Compose از PostgreSQL استفاده می‌کند. |
 | `APPOINTMENT_PAYMENT_CARD` | شمارهٔ کارت دریافت هزینهٔ مشاوره. پیش از تأیید رزرو توسط مشاور، در محیط بک‌اند مقداردهی شود. |
 
 نمونهٔ اتصال مستقیم توسعه با `VITE_API_PROXY=false` و `VITE_API_BASE_URL=http://localhost:8000`، وارد کردن `http://localhost:5173` در هر دو فهرست CORS و CSRF است. در هر دو آدرس از نام میزبان یکسان استفاده کنید تا سیاست کوکی محلی یکسان باشد. آدرس فایل‌های خصوصی از API دانلود مجاز دریافت می‌شود. فقط پوشهٔ `media/` برای فایل عمومی سرو می‌شود و `private_media/` باید خارج از مسیر عمومی وب باقی بماند.
@@ -29,4 +29,4 @@ python -m pytest --ds=config.settings
 
 برای آزمون هم‌زمانی رزرو، PostgreSQL و امکان ایجاد پایگاه دادهٔ آزمون لازم است. Swagger در `/api/docs/`، مشخصات OpenAPI در [`schema.yml`](schema.yml) و گردش رزرو در [`APPOINTMENTS.md`](APPOINTMENTS.md) در دسترس‌اند.
 
-تحویل OTP در توسعه از طریق لاگ است. اتصال پیامک تولید، دریافت‌کنندهٔ رویدادهای اطلاع‌رسانی و زمان‌بندی یادآوری جلسه به زیرساخت استقرار نیاز دارند.
+برای ارسال OTP در توسعه و تولید، `SMSIR_API_KEY` و `SMSIR_OTP_TEMPLATE_ID` را در محیط بک‌اند تنظیم کنید. قالب Verify در پنل SMS.ir باید فعال باشد و پارامتر `CODE` داشته باشد. API پروژه شمارهٔ موبایل ایران را در قالب E.164 دریافت می‌کند. برای اجرای تست‌های خودکار نیازی به ارسال پیامک واقعی نیست.

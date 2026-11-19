@@ -137,31 +137,30 @@ TEMPLATES = [
 # Database
 # --------------------------------------------------
 
-USE_SQLITE = env.bool("DJANGO_USE_SQLITE", default=False)
+POSTGRES_DB = env.str("POSTGRES_DB", default="")
+USE_SQLITE = env.bool("DJANGO_USE_SQLITE", default=DEBUG and not POSTGRES_DB)
 
-# if USE_SQLITE:
-DATABASES = {
+if USE_SQLITE:
+    DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
-            "OPTIONS": {
-                "timeout": 20,
-            },
+            "OPTIONS": {"timeout": 20},
         }
     }
-# else:
-#     DATABASES = {
-#         "default": {
-#             "ENGINE": "django.db.backends.postgresql",
-#             "NAME": env.str("POSTGRES_DB", default="voyavisa"),
-#             "USER": env.str("POSTGRES_USER", default="postgres"),
-#             "PASSWORD": env.str("POSTGRES_PASSWORD", default=""),
-#             "HOST": env.str("POSTGRES_HOST", default="localhost"),
-#             "PORT": env.str("POSTGRES_PORT", default="5432"),
-#             "CONN_MAX_AGE": 60,
-#             "CONN_HEALTH_CHECKS": True,
-#         }
-#     }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": POSTGRES_DB or "voyavisa",
+            "USER": env.str("POSTGRES_USER", default="postgres"),
+            "PASSWORD": env.str("POSTGRES_PASSWORD", default=""),
+            "HOST": env.str("POSTGRES_HOST", default="localhost"),
+            "PORT": env.str("POSTGRES_PORT", default="5432"),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+        }
+    }
 
 
 # --------------------------------------------------
